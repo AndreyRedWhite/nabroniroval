@@ -1,8 +1,10 @@
 from sqlalchemy import select, insert, update, delete
 from pydantic import BaseModel
 
+
 class BaseRepository:
     model = None
+    schema: BaseModel = None
 
     def __init__(self, session):
         self.session = session
@@ -11,33 +13,42 @@ class BaseRepository:
 
         query = select(self.model)
         result = await self.session.execute(query)
-        return result.scalars().all()
+        return [self.schema.model_validate(model, from_attributes=True) for model in result.scalars().all()]
+
 
     async def get_one_or_none(self, filter_by):
 
-        query = select(self.model)
-        result = await self.session.execute(query).filter(**filter_by)
-        return result.scalars().one_or_none()
+        query = select(self.model).filter_by(**filter_by)
+        result = await self.session.execute(query)
+        model =  result.scalars().one_or_none()
+        if model is None:
+            return None
+        return self.schema.model_validate(model, from_attributes=True)
 
     async def add(self, data: BaseModel):
 
-        stmt = insert(self.model).values(**data.model_dump()).returning(self.model)
+        stmt = (insert(self.model)
+                .values(**data.model_dump())
+                .returning(self.model))
         result = await self.session.execute(stmt)
-        return result.scalar_one()
+        model = result.scalar_one()
+        return self.schema.model_validate(model, from_attributes=True)
 
-    async def edit(self, data: BaseModel, filter_by, exclude_unset: bool = False) -> None:
+    async def edit(self, data: BaseModel, filter_by, exclude_unset: bool = False):
         stmt = (
             update(self.model)
             .values(**data.model_dump(exclude_unset=exclude_unset))
-            .filter(**filter_by)
+            .filter_by(**filter_by)
             .returning(self.model)
         )
         result = await self.session.execute(stmt)
-        return result.scalar_one()
+        model = result.scalar_one()
+        return self.schema.model_validate(model, from_attributes=True)
 
-    async def delete(self, **filter_by) -> None:
-        stmt = delete(self.model)
-        deleted_hotel = await self.session.execute(stmt).filter(**filter_by).returning(self.model)
-        return deleted_hotel.scalar_one()
+    async def delete(self, **filter_by):
+        stmt = delete(self.model).filter_by(**filter_by).returning(self.model)
+        del_stmt = await self.session.execute(stmt)
+        model = del_stmt.scalar_one()
+        return self.schema.model_validate(model, from_attributes=True)
 
 

@@ -1,12 +1,9 @@
-from fastapi import Query, APIRouter, Body, Depends
-
-from sqlalchemy import insert, select, func
+from fastapi import Query, APIRouter, Body
 
 from src.api.dependencies import PaginationDep
-from src.database import async_session_maker, engine
-from src.models.hotels import HotelOrm
+from src.database import async_session_maker
 from src.repositories.hotels import HotelsRepository
-from src.schemas.hotels import HotelSchema, HotelPatchSchema
+from src.schemas.hotels import HotelSchema, HotelPatchSchema, HotelAddSchema
 
 router = APIRouter(prefix='/hotels', tags=['Отели'])
 
@@ -29,18 +26,23 @@ async def get_hotels(
             title=title, location=location, limit=per_page, offset=per_page * (pagination.page - 1))
 
 
+@router.get(path="/{id}", summary='Get a specific hotel')
+async def get_hotel(hotel_id: int):
+    async with async_session_maker() as session:
+        return await HotelsRepository(session).get_one_or_none(hotel_id)
+
+
 @router.post(path="", summary='Add new wonderful hotel')
-async def add_hotel(data: HotelSchema = Body(openapi_examples=post_examples)):
+async def add_hotel(data: HotelAddSchema = Body(openapi_examples=post_examples)):
     async with async_session_maker() as session:
         hotel = await HotelsRepository(session).add(data)
         await session.commit()
         return {'status': 'OK', 'hotel': hotel}
 
 
-
 @router.put(path="/{hotel_id}", summary='Update all the info about particular hotel')
 async def update_hotel(
-    hotel_id: int, data: HotelSchema = Body(openapi_examples=post_examples)):
+    hotel_id: int, data: HotelAddSchema = Body(openapi_examples=post_examples)):
     async with async_session_maker() as session:
         hotel = await HotelsRepository(session).edit(data, hotel_id=hotel_id)
         await session.commit()
@@ -53,8 +55,6 @@ async def delete_hotel(hotel_id: int):
         delhotel = await HotelsRepository(session).delete(hotel_id=hotel_id)
         await session.commit()
         return {'status': 'OK', 'hotel': delhotel}
-
-
 
 
 @router.patch(path="/{hotel_id}", summary='Partially update an info about particular hotel')

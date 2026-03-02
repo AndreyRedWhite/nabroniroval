@@ -7,13 +7,16 @@ from src.schemas.hotels import HotelSchema
 
 class HotelsRepository(BaseRepository):
     model = HotelOrm
+    schema = HotelSchema
 
     async def get_all(self, title: str, location: str, limit: int, offset: int):
         get_hotels_query = select(self.model)
         if title:
-            get_hotels_query = get_hotels_query.filter(func.lower(self.model.title).ilike(f'%{title.strip().lower()}%'))
+            get_hotels_query = get_hotels_query.filter(func.lower(self.model.title)
+                                                       .ilike(f'%{title.strip().lower()}%'))
         if location:
-            get_hotels_query = get_hotels_query.filter(func.lower(self.model.location).ilike(f"%{location.strip().lower()}%"))
+            get_hotels_query = get_hotels_query.filter(func.lower(self.model.location)
+                                                       .ilike(f"%{location.strip().lower()}%"))
         get_hotels_query = (
             get_hotels_query
             .limit(limit)
@@ -21,12 +24,13 @@ class HotelsRepository(BaseRepository):
             order_by(HotelOrm.id)
         )
         result = await self.session.execute(get_hotels_query)
-        return result.scalars().all()
+        return [self.schema.model_validate(item, from_attributes=True) for item in result.scalars().all()]
 
-    async def get_by_id(self, hotel_id: int):
-        get_hotels_query = select(self.model).where(func.lower(self.model.id).ilike(f'%{hotel_id}%'))
-        result = await self.session.execute(get_hotels_query)
+    async def get_one_or_none(self, hotel_id: int):
+        get_hotel_query = select(self.model).where(HotelOrm.id == hotel_id)
+        result = await self.session.execute(get_hotel_query)
         return result.scalars().first()
+
 
     async def edit(self, data: HotelSchema, hotel_id: int, exclude_unset: bool = False):
         update_hotel_stmt = (
@@ -38,7 +42,11 @@ class HotelsRepository(BaseRepository):
         return result.scalar_one()
 
     async def delete(self, hotel_id: int):
-        delete_hotel_stmt = delete(self.model).where(self.model.id == hotel_id).returning(self.model)
+        delete_hotel_stmt = (
+            (delete(self.model)
+            .where(self.model.id == hotel_id)
+            .returning(self.model))
+        )
         result = await self.session.execute(delete_hotel_stmt)
         return result.scalar_one()
 
