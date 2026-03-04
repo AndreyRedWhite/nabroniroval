@@ -12,6 +12,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 from src.database import Base
 from src.models.hotels import HotelOrm
 from src.models.rooms import RoomsOrm
+from src.models.users import UserOrm
 from src.config import settings
 
 # this is the Alembic Config object, which provides
