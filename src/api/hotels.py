@@ -14,7 +14,7 @@ post_examples = {"1": {"summary": "Сочи", "value":
     {"title": "hotel dubai", "location": "Дубай, шейха 1"}}}
 
 
-@router.get(path="", summary='Get all the hotels')
+@router.get(path="", summary='Get all hotels')
 async def get_hotels(
     pagination: PaginationDep,
     title: str | None = Query(default=None, description='Название отеля'),

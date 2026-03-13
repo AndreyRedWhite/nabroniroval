@@ -23,8 +23,7 @@ def get_token(request: Request) -> str:
 def get_current_user_id(token: str = Depends(get_token)) -> int | None:
     data = AuthService().decode_token(token=token)
     user_id = data.get('user id', None)
-    if user_id:
-        return user_id
+    return user_id
 
 
 UserIdDep = Annotated[int, Depends(get_current_user_id)]
