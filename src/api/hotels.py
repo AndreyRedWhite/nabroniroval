@@ -1,6 +1,6 @@
 from fastapi import Query, APIRouter, Body
 
-from src.api.dependencies import PaginationDep
+from src.api.dependencies import PaginationDep, DBdeb
 from src.database import async_session_maker
 from src.repositories.hotels import HotelsRepository
 from src.schemas.hotels import HotelSchema, HotelPatchSchema, HotelAddSchema
@@ -17,50 +17,45 @@ post_examples = {"1": {"summary": "Сочи", "value":
 @router.get(path="", summary='Get all hotels')
 async def get_hotels(
     pagination: PaginationDep,
+    db: DBdeb,
     title: str | None = Query(default=None, description='Название отеля'),
     location: str | None = Query(default=None, description='Адрес отеля')
 ):
     per_page = pagination.per_page or 5
-    async with async_session_maker() as session:
-        return await HotelsRepository(session).get_all(
-            title=title, location=location, limit=per_page, offset=per_page * (pagination.page - 1))
+    return await db.hotels.get_all(
+        title=title, location=location, limit=per_page, offset=per_page * (pagination.page - 1))
 
 
 @router.get(path="/{id}", summary='Get a specific hotel')
-async def get_hotel(hotel_id: int):
-    async with async_session_maker() as session:
-        return await HotelsRepository(session).get_one_or_none(hotel_id)
+async def get_hotel(hotel_id: int, db: DBdeb):
+    return await db.hotels.get_one_or_none(hotel_id)
 
 
 @router.post(path="", summary='Add new wonderful hotel')
-async def add_hotel(data: HotelAddSchema = Body(openapi_examples=post_examples)):
-    async with async_session_maker() as session:
-        hotel = await HotelsRepository(session).add(data)
-        await session.commit()
-        return {'status': 'OK', 'hotel': hotel}
+async def add_hotel(db: DBdeb, data: HotelAddSchema = Body(openapi_examples=post_examples)):
+    hotel = await db.hotels.add(data)
+    await db.commit()
+    return {'status': 'OK', 'hotel': hotel}
 
 
 @router.put(path="/{hotel_id}", summary='Update all the info about particular hotel')
 async def update_hotel(
-    hotel_id: int, data: HotelAddSchema = Body(openapi_examples=post_examples)):
-    async with async_session_maker() as session:
-        hotel = await HotelsRepository(session).edit(data, hotel_id=hotel_id)
-        await session.commit()
-        return {'status': 'OK', 'hotel': hotel}
+    hotel_id: int, db: DBdeb ,data: HotelAddSchema = Body(openapi_examples=post_examples)):
+    hotel = await db.hotels.edit(data, hotel_id=hotel_id)
+    await db.commit()
+    return {'status': 'OK', 'hotel': hotel}
 
 
 @router.delete(path="/{hotel_id}", summary='Delete hotel')
-async def delete_hotel(hotel_id: int):
-    async with async_session_maker() as session:
-        delhotel = await HotelsRepository(session).delete(hotel_id=hotel_id)
-        await session.commit()
-        return {'status': 'OK', 'hotel': delhotel}
+async def delete_hotel(hotel_id: int, db: DBdeb):
+    delhotel = await db.hotels.delete(hotel_id=hotel_id)
+    await db.commit()
+    return {'status': 'OK', 'hotel': delhotel}
 
 
 @router.patch(path="/{hotel_id}", summary='Partially update an info about particular hotel')
 async def patch_hotel(
-    hotel_id: int, data: HotelPatchSchema = Body(openapi_examples=post_examples)):
-    async with async_session_maker() as session:
-        hotel = await HotelsRepository(session).edit(data, hotel_id=hotel_id, exclude_unset=True)
-        await session.commit()
-        return {'status': 'OK', 'hotel': hotel}
+    hotel_id: int, db: DBdeb, data: HotelPatchSchema = Body(openapi_examples=post_examples)):
+    hotel = await db.hotels.edit(data, hotel_id=hotel_id, exclude_unset=True)
+    await db.commit()
+    return {'status': 'OK', 'hotel': hotel}
