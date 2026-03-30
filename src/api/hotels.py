@@ -1,9 +1,7 @@
 from fastapi import Query, APIRouter, Body
 
 from src.api.dependencies import PaginationDep, DBdeb
-from src.database import async_session_maker
-from src.repositories.hotels import HotelsRepository
-from src.schemas.hotels import HotelSchema, HotelPatchSchema, HotelAddSchema
+from src.schemas.hotels import HotelPatchSchema, HotelAddSchema
 
 router = APIRouter(prefix='/hotels', tags=['Отели'])
 

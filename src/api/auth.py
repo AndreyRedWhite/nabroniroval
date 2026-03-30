@@ -4,7 +4,7 @@ Endpoints for authentification and authorization.
 
 from fastapi import APIRouter, HTTPException, Response, Request
 
-from src.api.dependencies import UserIdDep
+from src.api.dependencies import UserIdDep, DBdeb
 from src.database import async_session_maker
 from src.repositories.users import UsersRepository
 from src.schemas.users import UserRequestAddSchema, UserAddSchema, UserLoginSchema
@@ -44,10 +44,9 @@ async def login_user(data: UserLoginSchema, response: Response):
 
 
 @router.get('/me')
-async def get_me(user_id: UserIdDep):
-    async with async_session_maker() as session:
-        user = await UsersRepository(session).get_one_or_none(id=user_id)
-        return user
+async def get_me(user_id: UserIdDep, db: DBdeb):
+    user = await db.users.get_one_or_none(id=user_id)
+    return user
 
 
 @router.post('/logout')
